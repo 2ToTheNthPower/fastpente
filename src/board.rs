@@ -21,6 +21,7 @@ impl fmt::Display for Piece {
     }
 }
 
+#[derive(Clone)]
 pub struct Board {
     pub size: usize,
     pub grid: Vec<Vec<Piece>>,
@@ -34,6 +35,18 @@ impl Board {
             size,
             grid: vec![vec![Piece::Empty; size]; size],
         }
+    }
+
+    pub fn get_moves(&self) -> Vec<(usize, usize)> {
+        let mut moves = Vec::new();
+        for row in 0..self.size {
+            for col in 0..self.size {
+                if self.grid[row][col] == Piece::Empty {
+                    moves.push((row, col));
+                }
+            }
+        }
+        moves
     }
 }
 

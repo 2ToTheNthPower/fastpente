@@ -1,5 +1,6 @@
 mod board;
 mod player;
+mod alphabetaplayer;
 mod game;
 use game::Game;
 use std::io;
@@ -13,7 +14,7 @@ fn main() {
     let mut num_games = 0;
     let mut num_draws = 0;
     let mut num_wins = vec![0; num_players];
-    while num_games < 10000 {
+    while num_games < 1000000 {
         let mut game = Game::new(size, num_players);
         let outcome = game.run();
         if outcome.is_draw{
