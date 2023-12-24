@@ -5,17 +5,24 @@ use game::Game;
 use std::io;
 
 fn main() {
-    println!("Welcome to Cargo Go!");
-    println!("Please enter the board size:");
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).expect("Failed to read line");
-    let size: usize = input.trim().parse().expect("Please type a number!");
-    println!("Please enter the number of players:");
-    input.clear();
-    io::stdin().read_line(&mut input).expect("Failed to read line");
-    let num_players: usize = input.trim().parse().expect("Please type a number!");
-    let mut game = Game::new(size, num_players);
-    game.run();
+    println!("Welcome to Cargo Pente!");
+    let size: usize = 19; //input.trim().parse().expect("Please type a number!");
+    let num_players: usize = 2;
+
+    // Run 10000 games
+    let mut num_games = 0;
+    let mut num_draws = 0;
+    let mut num_wins = vec![0; num_players];
+    while num_games < 10000 {
+        let mut game = Game::new(size, num_players);
+        let outcome = game.run();
+        if outcome.is_draw{
+            num_draws += 1;
+        } else {
+            num_wins[outcome.winner.unwrap()] += 1;
+        }
+        num_games += 1;
+    }
 }
 
 

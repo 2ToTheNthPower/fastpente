@@ -1,6 +1,6 @@
 use crate::board::Board;
 use crate::board::Piece;
-use crate::player::Player;
+use crate::player::RandomPlayer;
 use crate::player::get_piece_by_id;
 use crate::player::get_piece_id;
 
@@ -15,7 +15,7 @@ pub struct GameOutcome {
 // Implement a game struct that has a board and players
 pub struct Game {
     pub board: Board,
-    pub players: Vec<Player>,
+    pub players: Vec<RandomPlayer>,
 }
 
 impl Game {
@@ -24,7 +24,7 @@ impl Game {
         Game {
             board: Board::new(size),
             // Give every player a different Piece type
-            players: (0..num_players).map(|i| Player::new(i, get_piece_by_id(i))).collect(),
+            players: (0..num_players).map(|i| RandomPlayer::new(i, get_piece_by_id(i))).collect(),
         }
     }
 
@@ -50,7 +50,7 @@ impl Game {
                     if is_win {
                         return GameOutcome {
                             is_game_over: true,
-                            winner: Some(get_piece_id(piece.clone())),
+                            winner: Some(get_piece_id(piece)),
                             is_draw: false,
                         };
                     }
@@ -67,7 +67,7 @@ impl Game {
                     if is_win {
                         return GameOutcome {
                             is_game_over: true,
-                            winner: Some(get_piece_id(piece.clone())),
+                            winner: Some(get_piece_id(piece)),
                             is_draw: false,
                         };
                     }
@@ -85,7 +85,7 @@ impl Game {
                     if is_win {
                         return GameOutcome {
                             is_game_over: true,
-                            winner: Some(get_piece_id(piece.clone())), // Ensure get_piece_id is defined
+                            winner: Some(get_piece_id(piece)), // Ensure get_piece_id is defined
                             is_draw: false,
                         };
                     }
@@ -102,7 +102,7 @@ impl Game {
                     if is_win {
                         return GameOutcome {
                             is_game_over: true,
-                            winner: Some(get_piece_id(piece.clone())), // Ensure get_piece_id is defined
+                            winner: Some(get_piece_id(piece)), // Ensure get_piece_id is defined
                             is_draw: false,
                         };
                     }
@@ -113,9 +113,10 @@ impl Game {
         // 2. Check if any player has captured num_captured_pairs of other players pieces
         for player in &self.players {
             if player.captured_pairs >= num_captured_pairs {
+                println!("Player {} wins by capturing {} pairs!", player.id, num_captured_pairs);
                 return GameOutcome {
                     is_game_over: true,
-                    winner: Some(get_piece_id(player.piece_type.clone())),
+                    winner: Some(get_piece_id(&player.piece_type)),
                     is_draw: false,
                 };
             }
@@ -148,7 +149,7 @@ impl Game {
     }
 
     // Run the game loop
-    pub fn run(mut self) {
+    pub fn run(mut self) -> GameOutcome {
         // Implement the game loop here
         // 1. Print the board
         // 2. Ask the current player to plan a move
@@ -158,15 +159,16 @@ impl Game {
         // 6. If yes, print the board and declare the winner
         let mut current_player = 0;
         loop {
-            println!("{}", self.board);
+            // println!("{}", self.board);
             let (x, y) = self.players[current_player].think(&self.board);
             if let Err(e) = self.players[current_player].act(&mut self.board, x, y) {
-                println!("Player {} failed to act: {}", current_player, e);
+                println!("RandomPlayer {} failed to act: {}", current_player, e);
             }
-            if self.is_game_over(&self.board, 5, 5).is_game_over {
-                println!("{}", self.board);
-                println!("Player {} wins!", current_player);
-                break;
+            let outcome = self.is_game_over(&self.board, 5, 5);
+            if outcome.is_game_over {
+                // println!("{}", self.board);
+                println!("RandomPlayer {} wins!", current_player);
+                return outcome;
             }
             current_player = (current_player + 1) % self.players.len();
         }
