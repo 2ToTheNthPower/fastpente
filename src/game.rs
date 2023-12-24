@@ -28,14 +28,14 @@ impl Game {
         }
     }
 
-    pub fn is_game_over(&self, board: Board, num_in_a_row: usize, num_captured_pairs: usize) -> GameOutcome {
+    pub fn is_game_over(&self, board: &Board, num_in_a_row: usize, num_captured_pairs: usize) -> GameOutcome {
         // Return GameOutcome
         // 1. Check if there are num_in_a_row pieces (of the same color) in a row on diagonals, horizontal, or vertical
 
         for row in 0..board.size {
             for col in 0..board.size {
                 let piece = &board.grid[row][col];
-                if piece == Piece::Empty {
+                if *piece == Piece::Empty {
                     continue;
                 }
                 // Check horizontal
@@ -73,6 +73,7 @@ impl Game {
                     }
                 }
                 // Check diagonal
+                
                 if col + num_in_a_row <= board.size && row + num_in_a_row <= board.size {
                     let mut is_win = true;
                     for i in 1..num_in_a_row {
@@ -84,7 +85,7 @@ impl Game {
                     if is_win {
                         return GameOutcome {
                             is_game_over: true,
-                            winner: Some(get_piece_id(piece.clone())),
+                            winner: Some(get_piece_id(piece.clone())), // Ensure get_piece_id is defined
                             is_draw: false,
                         };
                     }
@@ -101,7 +102,7 @@ impl Game {
                     if is_win {
                         return GameOutcome {
                             is_game_over: true,
-                            winner: Some(get_piece_id(piece.clone())),
+                            winner: Some(get_piece_id(piece.clone())), // Ensure get_piece_id is defined
                             is_draw: false,
                         };
                     }
@@ -114,7 +115,7 @@ impl Game {
             if player.captured_pairs >= num_captured_pairs {
                 return GameOutcome {
                     is_game_over: true,
-                    winner: Some(get_piece_id(player.piece_type)),
+                    winner: Some(get_piece_id(player.piece_type.clone())),
                     is_draw: false,
                 };
             }
@@ -147,7 +148,7 @@ impl Game {
     }
 
     // Run the game loop
-    pub fn run(&mut self) {
+    pub fn run(mut self) {
         // Implement the game loop here
         // 1. Print the board
         // 2. Ask the current player to plan a move
@@ -162,7 +163,7 @@ impl Game {
             if let Err(e) = self.players[current_player].act(&mut self.board, x, y) {
                 println!("Player {} failed to act: {}", current_player, e);
             }
-            if self.is_game_over(self.board, 5, 5).is_game_over {
+            if self.is_game_over(&self.board, 5, 5).is_game_over {
                 println!("{}", self.board);
                 println!("Player {} wins!", current_player);
                 break;

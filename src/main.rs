@@ -1,10 +1,8 @@
-// Path: src/main.rs
-// Compare this snippet from src/main.rs:
-use game::Game;
-use std::io;
 mod board;
 mod player;
 mod game;
+use game::Game;
+use std::io;
 
 fn main() {
     println!("Welcome to Cargo Go!");

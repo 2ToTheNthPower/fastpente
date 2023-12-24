@@ -57,7 +57,7 @@ impl Player {
     }
 
     // A method for incrementing the number of captured pairs by n
-    pub fn capture(&mut self, n: usize) {
+    pub fn capture(mut self, n: usize) {
         self.captured_pairs += n;
     }
 
@@ -72,9 +72,9 @@ mod tests {
     fn test_player_act() {
         let mut board = Board::new(3);
         let player = Player::new(0, Piece::Black);
-        assert_eq!(player.act(&mut board, 0, 0), Ok(()));
-        assert_eq!(player.act(&mut board, 0, 0), Err("Position already occupied".to_string()));
-        assert_eq!(player.act(&mut board, 3, 0), Err("Position out of bounds".to_string()));
+        assert_eq!(player.act(mut board, 0, 0), Ok(()));
+        assert_eq!(player.act(mut board, 0, 0), Err("Position already occupied".to_string()));
+        assert_eq!(player.act(mut board, 3, 0), Err("Position out of bounds".to_string()));
     }
 }
 
