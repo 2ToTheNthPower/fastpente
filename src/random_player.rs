@@ -1,5 +1,6 @@
 use crate::board::Board;
 use crate::board::Piece;
+use crate::game::Game;
 use rand::Rng;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
@@ -48,13 +49,13 @@ impl RandomPlayer {
         Ok(())
     }
 
-    pub fn think(&self, board: &Board) -> (usize, usize) {
+    pub fn think(&self, mut game:Game) -> (usize, usize) {
         // Choose random unoccupied position
         let mut rng = rand::thread_rng();
         loop {
-            let x = rng.gen_range(0..board.size);
-            let y = rng.gen_range(0..board.size);
-            if board.grid[x][y] == Piece::Empty {
+            let x = rng.gen_range(0..game.board.size);
+            let y = rng.gen_range(0..game.board.size);
+            if game.board.grid[x][y] == Piece::Empty {
                 return (x, y);
             }
         }

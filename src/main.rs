@@ -1,5 +1,6 @@
 mod board;
 mod random_player;
+mod mcts_player;
 mod game;
 use game::Game;
 use std::io;
@@ -18,7 +19,7 @@ fn main() {
     while num_games < 10000 {
         num_games += 1;
         let mut game = Game::new(size, num_players);
-        let (board, reward, done, outcome) = game.run();
+        let (board, reward, done, outcome) = game.run(false);
 
         let file_path = format!("games/game_{}.bin", num_games);
         // game.save(&file_path);

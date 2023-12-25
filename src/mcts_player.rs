@@ -1,36 +1,59 @@
+use crate::{board::{Board, Piece}, game::Game};
+
 // Implement player that performs MCTS rollout
 
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct MCTSPlayer {
     pub piece_type: Piece,
     pub id: usize,
     pub num_rollouts: usize,
-}
+    pub captured_pairs: usize,
+    }
 
 impl MCTSPlayer {
-    pub fn new(id: usize, piece_type: Piece, num_rollouts: usize) -> MCTSPlayer {
-        MCTSPlayer { id, piece_type, num_rollouts }
+    pub fn new(id: usize, piece_type: Piece, num_rollouts: usize, captured_pairs: usize) -> MCTSPlayer {
+        MCTSPlayer { id, piece_type, num_rollouts, captured_pairs }
+    }
+
+    pub fn act(&mut self, board: &mut Board, x: usize, y: usize) -> Result<(), String> {
+        if x >= board.size || y >= board.size {
+            return Err("Position out of bounds".to_string());
+        }
+        if board.grid[x][y] != Piece::Empty {
+            return Err("Position already occupied".to_string());
+        }
+        board.grid[x][y] = self.piece_type.clone();
+        // Capture logic
+        self.capture(board, x, y);
+
+        Ok(())
     }
 
     // Define think function that performs MCTS rollout
-    pub fn think(&self, game: Game) -> (usize, usize) {
+    pub fn think(&self, mut game: Game) -> (usize, usize) {
         // Choose random unoccupied position
-        let mut valid_actions = board.get_moves();
+        let mut valid_actions = game.board.get_moves();
 
-        // For every valid action, perform a rollout
-        let mut rng = rand::thread_rng();
-        let mut action_scores = vec![0; valid_actions.len()];
+        // For every valid action, perform a rollou
+        let mut best_score = 0.0;
+        let mut best_action = valid_actions[0];
 
         for (i, action) in valid_actions.iter().enumerate() {
-            let mut total_score = 0;
-            let (winner_0_count, winner_1_count, is_draw_count) = game.rollout(n=self.num_rollouts);
+            let mut total_score: f32 = 0.0;
+            let (winner_0_count, winner_1_count, is_draw_count) = game.rollout(self.num_rollouts);
+            // println!("{} {} {}", winner_0_count, winner_1_count, is_draw_count);
             if self.id == 0 {
-                total_score = winner_0_count / self.num_rollouts;
+                total_score = (winner_0_count as f32) / (self.num_rollouts as f32);
             } else if self.id == 1 {
-                total_score = winner_1_count / self.num_rollouts;
+                total_score = winner_1_count as f32 / self.num_rollouts as f32;
             }
-            action_scores[i] = total_score;
+            if total_score > best_score {
+                // println!("{} {}", total_score, best_score);
+                best_score = total_score;
+                best_action = *action;
+            }
         }
-        return valid_actions[action_scores.iter().position_max().unwrap()];
+        return best_action;
     }
 
     pub fn owns_piece(&self, board: &Board, x: usize, y: usize) -> bool {

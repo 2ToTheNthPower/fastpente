@@ -1,8 +1,10 @@
 use std::io::{Read, Write};
 use std::fs::File;
+use rand::Rng;
+
 use crate::board::Board;
 use crate::board::Piece;
-use crate::random_player::RandomPlayer;
+use crate::mcts_player::MCTSPlayer;
 use crate::random_player::get_piece_by_id;
 use crate::random_player::get_piece_id;
 
@@ -19,7 +21,7 @@ pub struct GameOutcome {
 pub struct Game {
     // pub boards: Vec<Board>,
     pub board: Board,
-    pub players: Vec<RandomPlayer>,
+    pub players: Vec<MCTSPlayer>,
     pub player_idx: usize,
 }
 
@@ -30,7 +32,7 @@ impl Game {
             // boards: Vec::new(),
             board: Board::new(size),
             // Give every player a different Piece type
-            players: (0..num_players).map(|i| RandomPlayer::new(i, get_piece_by_id(i))).collect(),
+            players: (0..num_players).map(|i| MCTSPlayer::new(i, get_piece_by_id(i), 100, 0)).collect(),
             player_idx: 0,
         }
     }
@@ -40,7 +42,7 @@ impl Game {
             // boards: Vec::new(),
             board: Board::new(size),
             // Give every player a different Piece type
-            players: (0..num_players).map(|i| RandomPlayer::new(i, get_piece_by_id(i))).collect(),
+            players: (0..num_players).map(|i| MCTSPlayer::new(i, get_piece_by_id(i), 100, 0)).collect(),
             player_idx: 0,
         }
     }
@@ -53,7 +55,7 @@ impl Game {
 
         for _ in 0..n {
             let mut game = self.clone();
-            let (board, reward, done, outcome) = game.run();
+            let (board, reward, done, outcome) = game.run(true);
             if outcome.is_draw {
                 is_draw_count += 1;
             } else if outcome.winner == 0 {
@@ -198,7 +200,7 @@ impl Game {
 
         // self.boards.push(self.board.clone());
         if let Err(e) = player.act(&mut self.board, x, y) {
-            println!("RandomPlayer {} failed to act: {}", 0, e);
+            println!("MCTSPlayer {} failed to act: {}", 0, e);
         }
         let outcome = self.is_game_over(&self.board, 5, 5);
 
@@ -228,7 +230,7 @@ impl Game {
     }
 
     // Use step() in a loop to run a game
-    pub fn run(&mut self) -> (Board, f32, bool, GameOutcome) {
+    pub fn run(mut self, random: bool) -> (Board, f32, bool, GameOutcome) {
         let mut done = false;
         let mut reward = 0.0;
         let mut board = self.board.clone();
@@ -237,9 +239,18 @@ impl Game {
             winner: 100,
             is_draw: false,
         };
+    
         while !done {
-            let player = &self.players[self.player_idx];
-            let action = player.think(&board);
+            let mut action = (0, 0);
+            if !random {
+                let player = &self.players[self.player_idx];
+                action = player.think(self.clone());
+            } else {
+                let mut rng = rand::thread_rng();
+                let mut valid_actions = self.board.get_moves();
+                action = valid_actions[rng.gen_range(0..valid_actions.len())];
+            }
+        
             let (new_board, new_reward, new_done, new_outcome) = self.step(action);
             board = new_board;
             reward = new_reward;
