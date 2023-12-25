@@ -2,9 +2,9 @@ use std::io::{Read, Write};
 use std::fs::File;
 use crate::board::Board;
 use crate::board::Piece;
-use crate::player::RandomPlayer;
-use crate::player::get_piece_by_id;
-use crate::player::get_piece_id;
+use crate::random_player::RandomPlayer;
+use crate::random_player::get_piece_by_id;
+use crate::random_player::get_piece_id;
 
 // Define struct for game outcomes
 pub struct GameOutcome {
@@ -17,7 +17,7 @@ pub struct GameOutcome {
 // Implement a game struct that has a board and players
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Game {
-    pub boards: Vec<Board>,
+    // pub boards: Vec<Board>,
     pub board: Board,
     pub players: Vec<RandomPlayer>,
     pub player_idx: usize,
@@ -27,7 +27,17 @@ impl Game {
     // Initialize a new game with a board and num_players players
     pub fn new(size: usize, num_players: usize) -> Game {
         Game {
-            boards: Vec::new(),
+            // boards: Vec::new(),
+            board: Board::new(size),
+            // Give every player a different Piece type
+            players: (0..num_players).map(|i| RandomPlayer::new(i, get_piece_by_id(i))).collect(),
+            player_idx: 0,
+        }
+    }
+
+    pub fn reset(&mut self, size: usize, num_players: usize) -> Game {
+        Game {
+            // boards: Vec::new(),
             board: Board::new(size),
             // Give every player a different Piece type
             players: (0..num_players).map(|i| RandomPlayer::new(i, get_piece_by_id(i))).collect(),
@@ -165,9 +175,7 @@ impl Game {
         let player = &mut self.players[self.player_idx];
         let (x, y) = action;
 
-        if self.board.grid[x][y] != Piece::Empty {
-            return (self.board.clone(), 0.0, false);
-        }
+        // self.boards.push(self.board.clone());
         if let Err(e) = player.act(&mut self.board, x, y) {
             println!("RandomPlayer {} failed to act: {}", 0, e);
         }
