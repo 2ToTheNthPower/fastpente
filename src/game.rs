@@ -46,17 +46,23 @@ impl Game {
     }
 
     // Define a MCTS rollout function that plays n games from the current game state, and returns each outcome.
-    pub fn rollout(&mut self, n: usize) -> (Vec<usize>, Vec<bool>){
-        let mut winners = Vec::new();
-        let mut is_draw = Vec::new();
+    pub fn rollout(&mut self, n: usize) -> (usize, usize, usize){
+        let mut winner_0_count = 0;
+        let mut winner_1_count = 0;
+        let mut is_draw_count = 0;
 
         for _ in 0..n {
             let mut game = self.clone();
             let (board, reward, done, outcome) = game.run();
-            winners.push(outcome.winner);
-            is_draw.push(outcome.is_draw);
+            if outcome.is_draw {
+                is_draw_count += 1;
+            } else if outcome.winner == 0 {
+                winner_0_count += 1;
+            } else if outcome.winner == 1 {
+                winner_1_count += 1;
+            }
         }
-        (winners, is_draw)
+        return (winner_0_count, winner_1_count, is_draw_count)
     }
 
     // Define a function that checks if the game is over
@@ -219,7 +225,7 @@ impl Game {
 
         let game: Game = bincode::deserialize(&buffer)?;
         Ok(game)
-}
+    }
 
     // Use step() in a loop to run a game
     pub fn run(&mut self) -> (Board, f32, bool, GameOutcome) {
@@ -245,3 +251,4 @@ impl Game {
         (board, reward, done, outcome)
     }
 }
+
