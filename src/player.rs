@@ -2,6 +2,7 @@ use crate::board::Board;
 use crate::board::Piece;
 use rand::Rng;
 
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct RandomPlayer {
     pub id: usize, // or some other identifier
     pub piece_type: Piece,

@@ -1,3 +1,5 @@
+use std::io::{Read, Write};
+use std::fs::File;
 use crate::board::Board;
 use crate::board::Piece;
 use crate::player::RandomPlayer;
@@ -8,29 +10,35 @@ use crate::player::get_piece_id;
 pub struct GameOutcome {
     pub is_game_over: bool,
     pub is_draw: bool,
-    pub winner: Option<usize>,
+    pub winner: usize,
 }
 
 
 // Implement a game struct that has a board and players
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Game {
+    pub boards: Vec<Board>,
     pub board: Board,
     pub players: Vec<RandomPlayer>,
+    pub player_idx: usize,
 }
 
 impl Game {
     // Initialize a new game with a board and num_players players
     pub fn new(size: usize, num_players: usize) -> Game {
         Game {
+            boards: Vec::new(),
             board: Board::new(size),
             // Give every player a different Piece type
             players: (0..num_players).map(|i| RandomPlayer::new(i, get_piece_by_id(i))).collect(),
+            player_idx: 0,
         }
     }
 
     pub fn is_game_over(&self, board: &Board, num_in_a_row: usize, num_captured_pairs: usize) -> GameOutcome {
         // Return GameOutcome
         // 1. Check if there are num_in_a_row pieces (of the same color) in a row on diagonals, horizontal, or vertical
+        let player = &self.players[self.player_idx];
 
         for row in 0..board.size {
             for col in 0..board.size {
@@ -50,7 +58,7 @@ impl Game {
                     if is_win {
                         return GameOutcome {
                             is_game_over: true,
-                            winner: Some(get_piece_id(piece)),
+                            winner: player.id,
                             is_draw: false,
                         };
                     }
@@ -67,7 +75,7 @@ impl Game {
                     if is_win {
                         return GameOutcome {
                             is_game_over: true,
-                            winner: Some(get_piece_id(piece)),
+                            winner: player.id,
                             is_draw: false,
                         };
                     }
@@ -85,7 +93,7 @@ impl Game {
                     if is_win {
                         return GameOutcome {
                             is_game_over: true,
-                            winner: Some(get_piece_id(piece)), // Ensure get_piece_id is defined
+                            winner: player.id, // Ensure get_piece_id is defined
                             is_draw: false,
                         };
                     }
@@ -102,7 +110,7 @@ impl Game {
                     if is_win {
                         return GameOutcome {
                             is_game_over: true,
-                            winner: Some(get_piece_id(piece)), // Ensure get_piece_id is defined
+                            winner: player.id, // Ensure get_piece_id is defined
                             is_draw: false,
                         };
                     }
@@ -110,17 +118,16 @@ impl Game {
             }
         }
 
-        // 2. Check if any player has captured num_captured_pairs of other players pieces
-        for player in &self.players {
-            if player.captured_pairs >= num_captured_pairs {
-                println!("Player {} wins by capturing {} pairs!", player.id, num_captured_pairs);
-                return GameOutcome {
-                    is_game_over: true,
-                    winner: Some(get_piece_id(&player.piece_type)),
-                    is_draw: false,
-                };
-            }
+        // 2. Check if current player has captured num_captured_pairs of other players pieces
+        if player.captured_pairs >= num_captured_pairs {
+            // println!("Player {} wins by capturing {} pairs!", player.id, num_captured_pairs);
+            return GameOutcome {
+                is_game_over: true,
+                winner: player.id,
+                is_draw: false,
+            };
         }
+
 
         // 3. Check if the board is full
         let mut is_full = true;
@@ -136,41 +143,76 @@ impl Game {
         if is_full {
             return GameOutcome {
                 is_game_over: true,
-                winner: None,
+                winner: 100,
                 is_draw: true,
             };
         } else {
             return GameOutcome {
                 is_game_over: false,
-                winner: None,
+                winner: 100,
                 is_draw: false,
             };
         }
     }
 
-    // Run the game loop
-    pub fn run(mut self) -> GameOutcome {
-        // Implement the game loop here
-        // 1. Print the board
-        // 2. Ask the current player to plan a move
-        // 3. Ask the current player to act on the board
-        // 4. Check if the game is over
-        // 5. If not, go to step 1 with the next player
-        // 6. If yes, print the board and declare the winner
-        let mut current_player = 0;
-        loop {
-            // println!("{}", self.board);
-            let (x, y) = self.players[current_player].think(&self.board);
-            if let Err(e) = self.players[current_player].act(&mut self.board, x, y) {
-                println!("RandomPlayer {} failed to act: {}", current_player, e);
-            }
-            let outcome = self.is_game_over(&self.board, 5, 5);
-            if outcome.is_game_over {
-                // println!("{}", self.board);
-                println!("RandomPlayer {} wins!", current_player);
-                return outcome;
-            }
-            current_player = (current_player + 1) % self.players.len();
+    // Implement a step function that conforms to the GYM reinforcement learning API standard
+    pub fn step(&mut self, action: (usize, usize)) -> (Board, f32, bool) {
+        // 1. Check if the action is valid
+        // 2. If the action is valid, apply it to the board
+        // 3. Check if the game is over
+        // 4. If the game is over, return the board, reward, and done
+        // 5. If the game is not over, return the board, 0 reward, and not done
+        let player = &mut self.players[self.player_idx];
+        let (x, y) = action;
+
+        if self.board.grid[x][y] != Piece::Empty {
+            return (self.board.clone(), 0.0, false);
         }
+        if let Err(e) = player.act(&mut self.board, x, y) {
+            println!("RandomPlayer {} failed to act: {}", 0, e);
+        }
+        let outcome = self.is_game_over(&self.board, 5, 5);
+
+        if outcome.is_game_over && !outcome.is_draw {
+            return (self.board.clone(), outcome.winner as f32, true);
+        }
+
+        (self.board.clone(), 0.0, false)
+    }
+
+    // Write Game to binary file using bincode
+    pub fn save(&mut self, file_path: &str) {
+        let target: Option<Game> = Some(self.clone());
+        let serialized = bincode::serialize(&target).unwrap();
+        let mut file = std::fs::File::create(file_path).unwrap();
+        file.write_all(&serialized).unwrap();
+    }
+
+    // Load Game from binary file using bincode
+    pub fn load(file_path: &str) -> Result<Game, Box<dyn std::error::Error>> {
+        let mut file = File::open(file_path)?;
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer)?;
+
+        let game: Game = bincode::deserialize(&buffer)?;
+        Ok(game)
+}
+
+    // Use step() in a loop to run a game
+    pub fn run(&mut self) -> (Board, f32, bool) {
+        let mut done = false;
+        let mut reward = 0.0;
+        let mut board = self.board.clone();
+        while !done {
+            let player = &self.players[self.player_idx];
+            let action = player.think(&board);
+            let (new_board, new_reward, new_done) = self.step(action);
+            board = new_board;
+            reward = new_reward;
+            done = new_done;
+            self.player_idx = (self.player_idx + 1) % self.players.len();
+        }
+        // println!("Player {} wins!", self.player_idx);
+        (board, reward, done)
     }
 }

@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum Piece {
     Empty,
     Black,
@@ -21,7 +21,7 @@ impl fmt::Display for Piece {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct Board {
     pub size: usize,
     pub grid: Vec<Vec<Piece>>,
