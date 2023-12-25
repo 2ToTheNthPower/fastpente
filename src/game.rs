@@ -1,4 +1,3 @@
-use crate::alphabetaplayer::AlphaBetaPlayer;
 use crate::board::Board;
 use crate::board::Piece;
 use crate::player::RandomPlayer;
@@ -16,7 +15,7 @@ pub struct GameOutcome {
 // Implement a game struct that has a board and players
 pub struct Game {
     pub board: Board,
-    pub players: Vec<AlphaBetaPlayer>,
+    pub players: Vec<RandomPlayer>,
 }
 
 impl Game {
@@ -25,7 +24,7 @@ impl Game {
         Game {
             board: Board::new(size),
             // Give every player a different Piece type
-            players: (0..num_players).map(|i| AlphaBetaPlayer::new(i, get_piece_by_id(i))).collect(),
+            players: (0..num_players).map(|i| RandomPlayer::new(i, get_piece_by_id(i))).collect(),
         }
     }
 
