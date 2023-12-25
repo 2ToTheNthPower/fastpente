@@ -18,7 +18,7 @@ fn main() {
     while num_games < 10000 {
         num_games += 1;
         let mut game = Game::new(size, num_players);
-        let (board, reward, done) = game.run();
+        let (board, reward, done, outcome) = game.run();
 
         let file_path = format!("games/game_{}.bin", num_games);
         // game.save(&file_path);

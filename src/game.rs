@@ -45,6 +45,21 @@ impl Game {
         }
     }
 
+    // Define a MCTS rollout function that plays n games from the current game state, and returns each outcome.
+    pub fn rollout(&mut self, n: usize) -> (Vec<usize>, Vec<bool>){
+        let mut winners = Vec::new();
+        let mut is_draw = Vec::new();
+
+        for _ in 0..n {
+            let mut game = self.clone();
+            let (board, reward, done, outcome) = game.run();
+            winners.push(outcome.winner);
+            is_draw.push(outcome.is_draw);
+        }
+        (winners, is_draw)
+    }
+
+    // Define a function that checks if the game is over
     pub fn is_game_over(&self, board: &Board, num_in_a_row: usize, num_captured_pairs: usize) -> GameOutcome {
         // Return GameOutcome
         // 1. Check if there are num_in_a_row pieces (of the same color) in a row on diagonals, horizontal, or vertical
@@ -166,7 +181,7 @@ impl Game {
     }
 
     // Implement a step function that conforms to the GYM reinforcement learning API standard
-    pub fn step(&mut self, action: (usize, usize)) -> (Board, f32, bool) {
+    pub fn step(&mut self, action: (usize, usize)) -> (Board, f32, bool, GameOutcome) {
         // 1. Check if the action is valid
         // 2. If the action is valid, apply it to the board
         // 3. Check if the game is over
@@ -182,10 +197,10 @@ impl Game {
         let outcome = self.is_game_over(&self.board, 5, 5);
 
         if outcome.is_game_over && !outcome.is_draw {
-            return (self.board.clone(), outcome.winner as f32, true);
+            return (self.board.clone(), outcome.winner as f32, true, outcome);
         }
 
-        (self.board.clone(), 0.0, false)
+        (self.board.clone(), 0.0, false, outcome)
     }
 
     // Write Game to binary file using bincode
@@ -207,20 +222,26 @@ impl Game {
 }
 
     // Use step() in a loop to run a game
-    pub fn run(&mut self) -> (Board, f32, bool) {
+    pub fn run(&mut self) -> (Board, f32, bool, GameOutcome) {
         let mut done = false;
         let mut reward = 0.0;
         let mut board = self.board.clone();
+        let mut outcome = GameOutcome {
+            is_game_over: false,
+            winner: 100,
+            is_draw: false,
+        };
         while !done {
             let player = &self.players[self.player_idx];
             let action = player.think(&board);
-            let (new_board, new_reward, new_done) = self.step(action);
+            let (new_board, new_reward, new_done, new_outcome) = self.step(action);
             board = new_board;
             reward = new_reward;
             done = new_done;
+            outcome = new_outcome;
             self.player_idx = (self.player_idx + 1) % self.players.len();
         }
         // println!("Player {} wins!", self.player_idx);
-        (board, reward, done)
+        (board, reward, done, outcome)
     }
 }
