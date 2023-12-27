@@ -17,12 +17,13 @@ pub struct GameOutcome {
 
 
 // Implement a game struct that has a board and players
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[derive(Clone)]
 pub struct Game {
     // pub boards: Vec<Board>,
     pub board: Board,
     pub players: Vec<MCTSPlayer>,
     pub player_idx: usize,
+    pub turn: usize,
 }
 
 impl Game {
@@ -32,8 +33,9 @@ impl Game {
             // boards: Vec::new(),
             board: Board::new(size),
             // Give every player a different Piece type
-            players: (0..num_players).map(|i| MCTSPlayer::new(i, get_piece_by_id(i), 100, 0)).collect(),
+            players: vec![MCTSPlayer::new(0, get_piece_by_id(0), 1, 0), MCTSPlayer::new(1, get_piece_by_id(1), 1, 0)],
             player_idx: 0,
+            turn: 0,
         }
     }
 
@@ -42,8 +44,9 @@ impl Game {
             // boards: Vec::new(),
             board: Board::new(size),
             // Give every player a different Piece type
-            players: (0..num_players).map(|i| MCTSPlayer::new(i, get_piece_by_id(i), 100, 0)).collect(),
+            players: vec![MCTSPlayer::new(0, get_piece_by_id(0), 1, 0), MCTSPlayer::new(1, get_piece_by_id(1), 1, 0)],
             player_idx: 0,
+            turn: 0,
         }
     }
 
@@ -67,6 +70,32 @@ impl Game {
         return (winner_0_count, winner_1_count, is_draw_count)
     }
 
+    // Make an explore function that runs a rollout for each valid action
+    pub fn explore(&mut self, rollouts_per_move: usize) -> Vec<(usize, usize)> {
+        let mut valid_actions = self.board.get_moves();
+        let mut action_scores = vec![0; valid_actions.len()];
+        for (i, action) in valid_actions.iter().enumerate() {
+            let mut total_score = 0;
+            let (winner_0_count, winner_1_count, is_draw_count) = self.rollout(rollouts_per_move);
+            if self.player_idx == 0 {
+                total_score = winner_0_count / 100;
+            } else if self.player_idx == 1 {
+                total_score = winner_1_count / 100;
+            }
+            action_scores[i] = total_score;
+        }
+        // Assuming action_scores is a Vec<usize> and valid_actions is a Vec of the same length
+        let mut best_score = 0;
+        let mut best_action = valid_actions[0];
+        for (i, score) in action_scores.iter().enumerate() {
+            if *score > best_score {
+                best_score = *score;
+                best_action = valid_actions[i];
+            }
+        }
+        return vec![best_action];
+    }
+
     // Define a function that checks if the game is over
     pub fn is_game_over(&self, board: &Board, num_in_a_row: usize, num_captured_pairs: usize) -> GameOutcome {
         // Return GameOutcome
@@ -75,7 +104,7 @@ impl Game {
 
         for row in 0..board.size {
             for col in 0..board.size {
-                let piece = &board.grid[row][col];
+                let piece = &board.grid[[row, col]];
                 if *piece == Piece::Empty {
                     continue;
                 }
@@ -83,7 +112,7 @@ impl Game {
                 if col + num_in_a_row <= board.size {
                     let mut is_win = true;
                     for i in 1..num_in_a_row {
-                        if board.grid[row][col + i] != *piece {
+                        if board.grid[[row, col + i]] != *piece {
                             is_win = false;
                             break;
                         }
@@ -100,7 +129,7 @@ impl Game {
                 if row + num_in_a_row <= board.size {
                     let mut is_win = true;
                     for i in 1..num_in_a_row {
-                        if board.grid[row + i][col] != *piece {
+                        if board.grid[[row + i, col]] != *piece {
                             is_win = false;
                             break;
                         }
@@ -118,7 +147,7 @@ impl Game {
                 if col + num_in_a_row <= board.size && row + num_in_a_row <= board.size {
                     let mut is_win = true;
                     for i in 1..num_in_a_row {
-                        if board.grid[row + i][col + i] != *piece {
+                        if board.grid[[row + i, col + i]] != *piece {
                             is_win = false;
                             break;
                         }
@@ -135,7 +164,7 @@ impl Game {
                 if col + 1 >= num_in_a_row && row + num_in_a_row <= board.size {
                     let mut is_win = true;
                     for i in 1..num_in_a_row {
-                        if board.grid[row + i][col - i] != *piece {
+                        if board.grid[[row + i, col - i]] != *piece {
                             is_win = false;
                             break;
                         }
@@ -166,7 +195,7 @@ impl Game {
         let mut is_full = true;
         for row in 0..board.size {
             for col in 0..board.size {
-                if board.grid[row][col] == Piece::Empty {
+                if board.grid[[row, col]] == Piece::Empty {
                     is_full = false;
                     break;
                 }
@@ -207,27 +236,27 @@ impl Game {
         if outcome.is_game_over && !outcome.is_draw {
             return (self.board.clone(), outcome.winner as f32, true, outcome);
         }
-
+        self.turn += 1;
         (self.board.clone(), 0.0, false, outcome)
     }
 
-    // Write Game to binary file using bincode
-    pub fn save(&mut self, file_path: &str) {
-        let target: Option<Game> = Some(self.clone());
-        let serialized = bincode::serialize(&target).unwrap();
-        let mut file = std::fs::File::create(file_path).unwrap();
-        file.write_all(&serialized).unwrap();
-    }
+    // // Write Game to binary file using bincode
+    // pub fn save(&mut self, file_path: &str) {
+    //     let target: Option<Game> = Some(self.clone());
+    //     let serialized = bincode::serialize(&target).unwrap();
+    //     let mut file = std::fs::File::create(file_path).unwrap();
+    //     file.write_all(&serialized).unwrap();
+    // }
 
-    // Load Game from binary file using bincode
-    pub fn load(file_path: &str) -> Result<Game, Box<dyn std::error::Error>> {
-        let mut file = File::open(file_path)?;
-        let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer)?;
+    // // Load Game from binary file using bincode
+    // pub fn load(file_path: &str) -> Result<Game, Box<dyn std::error::Error>> {
+    //     let mut file = File::open(file_path)?;
+    //     let mut buffer = Vec::new();
+    //     file.read_to_end(&mut buffer)?;
 
-        let game: Game = bincode::deserialize(&buffer)?;
-        Ok(game)
-    }
+    //     let game: Game = bincode::deserialize(&buffer)?;
+    //     Ok(game)
+    // }
 
     // Use step() in a loop to run a game
     pub fn run(mut self, random: bool) -> (Board, f32, bool, GameOutcome) {

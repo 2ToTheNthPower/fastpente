@@ -19,10 +19,10 @@ impl MCTSPlayer {
         if x >= board.size || y >= board.size {
             return Err("Position out of bounds".to_string());
         }
-        if board.grid[x][y] != Piece::Empty {
+        if board.grid[[x, y]] != Piece::Empty {
             return Err("Position already occupied".to_string());
         }
-        board.grid[x][y] = self.piece_type.clone();
+        board.grid[[x, y]] = self.piece_type.clone();
         // Capture logic
         self.capture(board, x, y);
 
@@ -42,10 +42,11 @@ impl MCTSPlayer {
             let mut total_score: f32 = 0.0;
             let (winner_0_count, winner_1_count, is_draw_count) = game.rollout(self.num_rollouts);
             // println!("{} {} {}", winner_0_count, winner_1_count, is_draw_count);
+            let mut win_diff = winner_0_count as f32 - winner_1_count as f32;
             if self.id == 0 {
-                total_score = (winner_0_count as f32) / (self.num_rollouts as f32);
+                total_score = (win_diff) / (self.num_rollouts as f32);
             } else if self.id == 1 {
-                total_score = winner_1_count as f32 / self.num_rollouts as f32;
+                total_score = (-win_diff) / (self.num_rollouts as f32);
             }
             if total_score > best_score {
                 // println!("{} {}", total_score, best_score);
@@ -53,11 +54,12 @@ impl MCTSPlayer {
                 best_action = *action;
             }
         }
+        // println!("Finished thinking for turn {}", game.turn);
         return best_action;
     }
 
     pub fn owns_piece(&self, board: &Board, x: usize, y: usize) -> bool {
-        board.grid[x][y] == self.piece_type
+        board.grid[[x, y]] == self.piece_type
     }
 
     pub fn capture(&mut self, board: &mut Board, x: usize, y: usize) {
@@ -91,16 +93,16 @@ impl MCTSPlayer {
 
                     // Capture logic
                     if self.owns_piece(board, pair_x, pair_y) && // Check if player owns the piece at the pair position
-                        board.grid[first_x][first_y] != Piece::Empty && // Make sure it's not empty
-                        board.grid[second_x][second_y] != Piece::Empty && // Capture the next piece
-                        board.grid[first_x][first_y] != self.piece_type && // Check if the next piece is an opponent's piece
-                        board.grid[second_x][second_y] == board.grid[first_x][first_y] {
+                        board.grid[[first_x, first_y]] != Piece::Empty && // Make sure it's not empty
+                        board.grid[[second_x, second_y]] != Piece::Empty && // Capture the next piece
+                        board.grid[[first_x, first_y]] != self.piece_type && // Check if the next piece is an opponent's piece
+                        board.grid[[second_x, second_y]] == board.grid[[first_x, first_y]] {
 
                         // Assuming a capture scenario - sandwiching one piece
                         self.captured_pairs += 1; // Increment captured pairs
                         // Clear the captured piece(s) from the board
-                        board.grid[first_x][first_y] = Piece::Empty; // Capture the next piece
-                        board.grid[second_x][second_y] = Piece::Empty; // Capture the next piece
+                        board.grid[[first_x, first_y]] = Piece::Empty; // Capture the next piece
+                        board.grid[[second_x, second_y]] = Piece::Empty; // Capture the next piece
 
                         // Extend this logic if your game involves capturing multiple pieces per move
                     }

@@ -1,4 +1,5 @@
 use std::fmt;
+use ndarray::{array, Array2, Dimension};
 
 #[derive(Clone, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum Piece {
@@ -21,10 +22,10 @@ impl fmt::Display for Piece {
     }
 }
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Clone)]
 pub struct Board {
     pub size: usize,
-    pub grid: Vec<Vec<Piece>>,
+    pub grid: Array2<Piece>,
 }
 
 impl Board {
@@ -33,7 +34,7 @@ impl Board {
     pub fn new(size:usize) -> Board {
         Board {
             size,
-            grid: vec![vec![Piece::Empty; size]; size],
+            grid: Array2::from_elem((size, size), Piece::Empty),
         }
     }
 
@@ -41,7 +42,7 @@ impl Board {
         let mut moves = Vec::new();
         for row in 0..self.size {
             for col in 0..self.size {
-                if self.grid[row][col] == Piece::Empty {
+                if self.grid[[row, col]] == Piece::Empty {
                     moves.push((row, col));
                 }
             }
@@ -52,8 +53,8 @@ impl Board {
 
 impl fmt::Display for Board {
     fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
-        for row in self.grid.iter(){
-            for cell in row.iter() {
+        for row in 0..self.grid.shape()[0] {
+            for cell in 0..self.grid.shape()[1] {
                 write!(f, "{} ", cell)?;
             }
             writeln!(f)?;

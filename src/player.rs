@@ -18,10 +18,10 @@ impl PlayerBehavior for RandomPlayer {
         if x >= board.size || y >= board.size {
             return Err("Position out of bounds".to_string());
         }
-        if board.grid[x][y] != Piece::Empty {
+        if board.grid[[x, y]] != Piece::Empty {
             return Err("Position already occupied".to_string());
         }
-        board.grid[x][y] = self.piece_type.clone();
+        board.grid[[x, y]] = self.piece_type.clone();
         // Capture logic
         self.capture(board, x, y);
 
@@ -34,7 +34,7 @@ impl PlayerBehavior for RandomPlayer {
         loop {
             let x = rng.gen_range(0..game.board.size);
             let y = rng.gen_range(0..game.board.size);
-            if game.board.grid[x][y] == Piece::Empty {
+            if game.board.grid[[x, y]] == Piece::Empty {
                 return (x, y);
             }
         }
@@ -63,10 +63,10 @@ impl PlayerBehavior for MCTSPlayer {
         if x >= board.size || y >= board.size {
             return Err("Position out of bounds".to_string());
         }
-        if board.grid[x][y] != Piece::Empty {
+        if board.grid[[x, y]] != Piece::Empty {
             return Err("Position already occupied".to_string());
         }
-        board.grid[x][y] = self.piece_type.clone();
+        board.grid[[x, y]] = self.piece_type.clone();
         // Capture logic
         self.capture(board, x, y);
 
