@@ -1,7 +1,6 @@
-// rustimport:pyo3
-
-use ndarray::Array2;
 use pyo3::prelude::*;
+use ndarray::Array2;
+
 
 #[pyclass]
 pub struct Pente {
@@ -194,4 +193,11 @@ impl Pente {
             println!();
         }
     }
+}
+
+
+#[pymodule]
+fn _lib(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
+    m.add_class::<Pente>()?;
+    Ok(())
 }

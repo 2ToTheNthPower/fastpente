@@ -1,1 +1,14 @@
-/target
+# Ignore __pycache__ directories
+global-exclude __pycache__
+
+# Ignore .pyc files
+global-exclude *.pyc
+
+# Ignore build directory
+build/
+
+# Ignore .egg-info directory
+python/pente.egg-info/
+
+# Ignore target directory
+target/
