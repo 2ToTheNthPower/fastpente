@@ -12,3 +12,5 @@ python/pente.egg-info/
 
 # Ignore target directory
 target/
+
+.swp

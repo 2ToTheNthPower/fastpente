@@ -1,13 +1,18 @@
 use pyo3::prelude::*;
 use ndarray::Array2;
+use rand::Rng;
 
 
 #[pyclass]
+#[derive(Clone)]
 pub struct Pente {
     pub board: Array2<i8>,
     pub size: u8,
+    #[pyo3(get, set)]
     pub current_player: i8,
+    #[pyo3(get, set)]
     pub player_1_pairs: u8,
+    #[pyo3(get, set)]
     pub player_2_pairs: u8,
 }
 
@@ -32,6 +37,39 @@ impl Pente {
             player_1_pairs: 0,
             player_2_pairs: 0,
         }
+    }
+
+    pub fn new_from_board(&mut self, board: Vec<Vec<i8>>) -> Pente {
+        let mut new_board = Array2::zeros((19, 19));
+        for row in 0..19 {
+            for col in 0..19 {
+                new_board[[row, col]] = board[row][col];
+            }
+        }
+        Pente {
+            board: new_board,
+            size: 19,
+            current_player: 1,
+            player_1_pairs: 0,
+            player_2_pairs: 0,
+        }
+    }
+
+    pub fn play_random_game(&mut self) -> Vec<(Pente, i8, bool)> {
+        let mut rng = rand::thread_rng();
+        let mut valid_actions: Vec<(usize, usize)> = self.get_valid_actions();
+        let mut done = false;
+        let mut state = self.clone();
+        let mut reward = 0;
+        let mut states: Vec<(Pente, i8, bool)> = Vec::new();
+        while !done {
+            valid_actions = self.get_valid_actions();
+            let action = valid_actions[rng.gen_range(0..valid_actions.len())];
+            (state, reward, done) = self.step(action.0, action.1);
+            states.push((state.clone(), reward, done));
+        }
+        
+        return states;
     }
 
     pub fn get(&self, row: usize, col: usize) -> i8 {
@@ -119,10 +157,10 @@ impl Pente {
     // Row, Col here is the last action taken.  Needed to speed up win condition checks.
     pub fn is_done(&self, row: usize, col: usize) -> bool {
         if self.player_1_pairs >= 5 {
-            println!("Player 1 wins!");
+            println!("Player -1 wins!");
             return true;
         } else if self.player_2_pairs >= 5 {
-            println!("Player 2 wins!");
+            println!("Player 1 wins!");
             return true;
         } else if self.is_full() {
             println!("Draw!");
@@ -156,18 +194,16 @@ impl Pente {
     pub fn get_valid_actions(&self) -> Vec<(usize, usize)> {
         let mut valid_actions: Vec<(usize, usize)> = Vec::new();
 
-        for row in 0..self.size as usize {
-            for col in 0..self.size as usize {
-                if self.is_valid_action(row as isize, col as isize) {
-                    valid_actions.push((row, col));
-                }
+        self.board.iter().enumerate().for_each(|(i, &x)| {
+            if x == 0 {
+                valid_actions.push((i / 19, i % 19));
             }
-        }
+        });
 
         return valid_actions;
     }
 
-    pub fn step(&mut self, row: usize, col: usize) -> bool {
+    pub fn step(&mut self, row: usize, col: usize) -> (Pente, i8, bool) {
         // Place the stone
         self.place(row, col);
         
@@ -176,12 +212,12 @@ impl Pente {
 
         // Check if the game is over
         if self.is_done(row, col) {
-            self.print();
-            return true;
+            // self.print();
+            return (self.clone(), self.current_player, true);
         } else {
             // Switch players
             self.current_player = -self.current_player;
-            return false;
+            return (self.clone(), 0, false);
         }
     }
 
@@ -192,6 +228,21 @@ impl Pente {
             }
             println!();
         }
+    }
+
+    // Function to return the board as Vec<Vec<i8>>
+    pub fn get_board(&self) -> Vec<Vec<i8>> {
+        let mut board: Vec<Vec<i8>> = Vec::new();
+
+        for row in 0..self.size as usize {
+            let mut board_row: Vec<i8> = Vec::new();
+            for col in 0..self.size as usize {
+                board_row.push(self.board[[row, col]]);
+            }
+            board.push(board_row);
+        }
+
+        return board;
     }
 }
 
