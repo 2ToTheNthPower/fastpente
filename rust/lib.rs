@@ -39,7 +39,7 @@ impl Pente {
         }
     }
 
-    pub fn new_from_board(&mut self, board: Vec<Vec<i8>>) -> Pente {
+    pub fn start_from_state(&mut self, board: Vec<Vec<i8>>, current_player: i8, player_1_pairs: u8, player_2_pairs: u8) -> Pente {
         let mut new_board = Array2::zeros((19, 19));
         for row in 0..19 {
             for col in 0..19 {
@@ -49,9 +49,9 @@ impl Pente {
         Pente {
             board: new_board,
             size: 19,
-            current_player: 1,
-            player_1_pairs: 0,
-            player_2_pairs: 0,
+            current_player: current_player,
+            player_1_pairs: player_1_pairs,
+            player_2_pairs: player_2_pairs,
         }
     }
 
@@ -157,13 +157,13 @@ impl Pente {
     // Row, Col here is the last action taken.  Needed to speed up win condition checks.
     pub fn is_done(&self, row: usize, col: usize) -> bool {
         if self.player_1_pairs >= 5 {
-            println!("Player -1 wins!");
+            // println!("Player -1 wins!");
             return true;
         } else if self.player_2_pairs >= 5 {
-            println!("Player 1 wins!");
+            // println!("Player 1 wins!");
             return true;
         } else if self.is_full() {
-            println!("Draw!");
+            // println!("Draw!");
             return true;
         } else {
             // Check if the current player has five in a row
@@ -178,7 +178,7 @@ impl Pente {
                     if (consecutive >= i - 1) && self.is_on_board(cur_row, cur_col) && self.board[[cur_row as usize, cur_col as usize]] == self.current_player {
                         consecutive += 1;
                         if consecutive >= 5 {
-                            println!("Player {} wins!", self.current_player);
+                            // println!("Player {} wins!", self.current_player);
                             return true;
                         }
                     } else {
@@ -246,9 +246,32 @@ impl Pente {
     }
 }
 
+#[pyfunction]
+fn get_values(game: Pente, rollouts_per_action: u64) -> Vec<Vec<f32>> {
+    // Get valid actions
+    let valid_actions = game.get_valid_actions();
+    let mut zero_vec = vec![0.0; 19];
+    let mut values = vec![zero_vec; 19];
+
+    // For each valid action, get the value of the state after taking that action for n random rollouts
+    for (row, col) in valid_actions {
+        let mut total_value = 0.0;
+        for _ in 0..rollouts_per_action {
+            let mut rollout_game = game.clone();
+            let (mut state, mut reward, mut done) = rollout_game.step(row, col);
+            // println!("Player {} takes action ({}, {})", state.current_player, row, col);
+            (state, reward, done) = rollout_game.play_random_game().pop().unwrap();
+            total_value += reward as f32;
+        }
+        values[row][col] = total_value / rollouts_per_action as f32;
+    }
+    return values;
+}
+
 
 #[pymodule]
 fn _lib(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<Pente>()?;
+    m.add_function(wrap_pyfunction!(get_values, m)?)?;
     Ok(())
 }
